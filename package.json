@@ -1,6 +1,8 @@
 {
-  "name": "@olympus/soteria",
+  "name": "@olympos/soteria",
   "version": "0.0.1",
+  "private": false,
+  "author": "Sly Duda <me@slyduda.com> (https://slyduda.com/)",
   "type": "module",
   "repository": {
     "type": "git",
