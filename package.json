@@ -1,6 +1,6 @@
 {
   "name": "@olympos/soteria",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": false,
   "author": "Sly Duda <me@slyduda.com> (https://slyduda.com/)",
   "type": "module",
@@ -17,7 +17,7 @@
     "vite-plugin-dts": "^4.0.3",
     "vitest": "^2.0.5"
   },
-  "main": "dist/index.js",
+  "main": "dist",
   "types": "dist/index.d.ts",
   "files": [
     "build",
