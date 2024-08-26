@@ -41,7 +41,6 @@ test("check to see if failure history works", () => {
   objectMachine.trigger("walk");
   objectMachine.trigger("stop");
   const response = objectMachine.trigger("walk");
-  console.log(JSON.stringify(response, null, 2));
   expect(response.success).toBe(false);
   expect(response.failure).toBeTruthy();
   expect(response.attempts[0].failure).toBeTruthy();

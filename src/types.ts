@@ -95,3 +95,15 @@ export type TransitionOptions<T> = {
 };
 
 export type TransitionProps = {};
+
+export type AvailableTransition<StateType, TriggerType extends string, T> = {
+  trigger: TriggerType;
+  origins: StateType[];
+  destination: StateType;
+  satisfied: boolean;
+  conditions: {
+    name: Condition<T>;
+    satisfied: boolean;
+  }[];
+  effects: Effect<T>[];
+};

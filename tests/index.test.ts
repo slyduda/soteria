@@ -20,7 +20,6 @@ test("check to see if state machine can transition", () => {
 // We trigger the walk transition which checks to see if energy is > 0
 test("check to see if conditions work", () => {
   const myObject = new ExampleObject(0);
-  console.log(myObject.hasEnergy());
   const objectMachine = addStateMachine(myObject, exampleMachineDict, {
     throwExceptions: false,
   });

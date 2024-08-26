@@ -13,6 +13,7 @@ import type {
   TransitionResult,
   StateList,
   PendingTransitionResult,
+  AvailableTransition,
 } from "./types";
 import { normalizeArray } from "./utils";
 
@@ -448,6 +449,77 @@ class StateMachineWrapper<
       failure: null,
     });
     return result;
+  }
+
+  getAvailableTransitions() {
+    if (!this.state) {
+      throw new Error("Current state is undefined");
+    }
+
+    if (!this.transitions) {
+      throw new Error("No transitions defined in the state machine");
+    }
+
+    const availableTransitions: AvailableTransition<
+      StateType,
+      TriggerType,
+      T
+    >[] = [];
+    const currentState = this.state;
+
+    for (const [trigger, transitionList] of Object.entries(this.transitions)) {
+      const transitions = normalizeArray(transitionList) as Transition<
+        StateType,
+        TriggerType,
+        T
+      >[];
+
+      for (const transition of transitions) {
+        const origins = normalizeArray(transition.origins);
+        const conditions = normalizeArray(transition.conditions || []);
+        const effects = normalizeArray(transition.effects || []);
+        if (origins.includes(currentState)) {
+          const conditionsDict = conditions.map((condition) => {
+            let satisfied = false;
+
+            try {
+              const conditionFunction = this.context?.[condition];
+
+              if (typeof conditionFunction === "function") {
+                satisfied = conditionFunction.call(this.context);
+              } else {
+                throw new Error(
+                  `Condition "${String(condition)}" is not a function.`
+                );
+              }
+            } catch (error) {
+              console.error(
+                `Error running condition "${String(condition)}":`,
+                error
+              );
+            }
+
+            return {
+              name: condition,
+              satisfied: satisfied,
+            };
+          });
+
+          availableTransitions.push({
+            trigger: trigger as TriggerType,
+            satisfied: conditionsDict.every(
+              (conditionDict) => conditionDict.satisfied
+            ),
+            origins,
+            destination: transition.destination,
+            conditions: conditionsDict,
+            effects,
+          });
+        }
+      }
+    }
+
+    return availableTransitions;
   }
 }
 
