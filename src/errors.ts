@@ -3,21 +3,21 @@ import { ErrorName } from "./types";
 class ErrorBase<T extends string> extends Error {
   name: T;
   message: string;
-  response: any | null;
+  result: any | null;
 
   constructor({
     name,
     message,
-    response,
+    result,
   }: {
     name: T;
     message: string;
-    response: any | null;
+    result: any | null;
   }) {
     super();
     this.name = name;
     this.message = name + ": " + message;
-    this.response = response;
+    this.result = result;
   }
 }
 

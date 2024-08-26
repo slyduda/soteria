@@ -20,7 +20,10 @@ test("check to see if state machine can transition", () => {
 // We trigger the walk transition which checks to see if energy is > 0
 test("check to see if conditions work", () => {
   const myObject = new ExampleObject(0);
-  const objectMachine = addStateMachine(myObject, exampleMachineDict);
+  console.log(myObject.hasEnergy());
+  const objectMachine = addStateMachine(myObject, exampleMachineDict, {
+    throwExceptions: false,
+  });
   expect(myObject.state).toBe<ExampleObjectState>("stopped");
   objectMachine.trigger("walk");
   expect(myObject.state).toBe<ExampleObjectState>("stopped");

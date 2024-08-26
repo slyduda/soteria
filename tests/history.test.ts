@@ -21,7 +21,7 @@ test("check to see if condition attempt context works", () => {
   const objectMachine = addStateMachine(myObject, exampleMachineDict);
   expect(myObject.state).toBe<ExampleObjectState>("stopped");
   const response = objectMachine.trigger("walk");
-  expect(response.transitions?.[0].conditions?.[0].context?.energy).toBe(1);
+  expect(response.attempts?.[0].conditions?.[0].context?.energy).toBe(1);
 });
 
 test("check to see if effects attempt context works", () => {
@@ -29,16 +29,20 @@ test("check to see if effects attempt context works", () => {
   const objectMachine = addStateMachine(myObject, exampleMachineDict);
   expect(myObject.state).toBe<ExampleObjectState>("stopped");
   const response = objectMachine.trigger("walk");
-  expect(response.transitions?.[0].effects?.[0].context?.energy).toBe(1);
+  expect(response.attempts?.[0].effects?.[0].context?.energy).toBe(1);
 });
 
 test("check to see if failure history works", () => {
   const myObject = new ExampleObject(START_ENERGY);
-  const objectMachine = addStateMachine(myObject, exampleMachineDict);
+  const objectMachine = addStateMachine(myObject, exampleMachineDict, {
+    throwExceptions: false,
+  });
   expect(myObject.state).toBe<ExampleObjectState>("stopped");
   objectMachine.trigger("walk");
   objectMachine.trigger("stop");
   const response = objectMachine.trigger("walk");
+  console.log(JSON.stringify(response, null, 2));
   expect(response.success).toBe(false);
-  expect(response.failure).toBeDefined();
+  expect(response.failure).toBeTruthy();
+  expect(response.attempts[0].failure).toBeTruthy();
 });

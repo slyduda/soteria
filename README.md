@@ -5,7 +5,7 @@
 ## Installation
 
 ```
-npm install @olympus/soteria
+npm install @olympos/soteria
 ```
 
 ## Quickstart
@@ -106,7 +106,7 @@ const matter = new Matter("solid");
 You can create a very simple working state machine bound to `matter` like this:
 
 ```ts
-import {} from "@olympus/soteria";
+import {} from "@olympos/soteria";
 
 const matterMachine = addStateMachine(matter, ["solid", "liquid"]);
 ```
@@ -144,7 +144,7 @@ console.log(matter.state); // liquid
 In most use cases where finite state machines are needed, it is often helpful to have additional logic that happens before, during, and after transitions. This is where the `.trigger()` method is helpful.
 
 ```ts
-import { TransitionDict } from "@olympus/soteria";
+import { TransitionDict } from "@olympos/soteria";
 
 type HeroState = "idle" | "sleeping";
 type HeroTrigger = "patrol" | "sleep";
@@ -187,6 +187,174 @@ hero.trigger("patrol");
 hero.trigger("patrol"); // No log because condition is not met so the hero does not work
 ```
 
+### Passing Data
+
+Data can be passed from the initial trigger function into all methods being called during the transition:
+
+```ts
+export class Matter {
+  state: MatterState;
+  temperature: number;
+  pressure: number;
+
+  constructor(state: MatterState, temperature?: number, pressure?: number) {
+    this.state = state;
+    this.temperature = temperature ?? 0;
+    this.pressure = pressure ?? 101.325;
+  }
+
+  setEnvironment(props?: { temperature: number; pressure: number }) {
+    const { temperature = 0, pressure = 101.325 } = props ?? {};
+    this.temperature = temperature;
+    this.pressure = pressure;
+  }
+}
+
+export const matterMachineDict: TransitionDict<
+  MatterState,
+  MatterTrigger,
+  Matter
+> = {
+  melt: [
+    { origins: "solid", destination: "liquid", effects: "setEnvironment" },
+  ],
+  evaporate: [{ origins: "liquid", destination: "gas" }],
+  sublimate: [{ origins: "solid", destination: "gas" }],
+  ionize: [{ origins: "gas", destination: "plasma" }],
+};
+```
+
+If we pass any props into the second argument of the trigger function, they will be passed to all conditions and all effects:
+
+```ts
+matterMachine.trigger("melt", { temperature: 20 });
+```
+
+One caveat is that we don't get type inference on the props, but you may cast them.
+
 ### Configuration
 
-To be updated
+The initial state machine may be configured with any of the following options like so:
+
+```ts
+const matter = addStateMachine(new Matter(), matterTransitionDict, {
+  verbosity: false,
+  throwExceptions: false,
+  strictOrigins: false,
+});
+```
+
+Further configuration in individual transitions may be changed and take priority:
+
+```ts
+matter.triggerWithOptions("evaporate", {
+  throwExceptions: true,
+});
+```
+
+More configuration options will come as `Soteria` grows
+
+## Advanced
+
+Debugging State Transitions is notoriously difficult. It is for this reason that each transition returns a structured object of the history of the context throughout the transition.
+
+```ts
+export class ExampleObject {
+  state: ExampleObjectState;
+  speed: number;
+  energy: number;
+
+  constructor(energy?: number) {
+    this.state = "stopped";
+    this.energy = energy ?? 1;
+    this.speed = 0;
+  }
+
+  speedUp() {
+    this.speed = 1;
+    this.energy--;
+  }
+
+  slowDown() {
+    this.speed = 0;
+  }
+
+  hasEnergy(): boolean {
+    return this.energy > 0;
+  }
+}
+
+export const exampleMachineDict: TransitionDict<
+  ExampleObjectState,
+  ExampleObjectTrigger,
+  ExampleObject
+> = {
+  walk: {
+    origins: ["stopped"],
+    destination: "walking",
+    effects: ["speedUp"],
+    conditions: ["hasEnergy"],
+  },
+  stop: {
+    origins: ["walking"],
+    destination: "stopped",
+  },
+};
+
+const myObject = new ExampleObject(1);
+const objectMachine = addStateMachine(myObject, exampleMachineDict);
+objectMachine.trigger("walk");
+objectMachine.trigger("stop");
+const response = objectMachine.trigger("walk"); // Will fail
+
+console.log(response);
+
+// {
+//   success: false,
+//   failure: {
+//     type: "ConditionValue",
+//     undefined: false,
+//     trigger: "walk",
+//     method: "hasEnergy",
+//     context: { state: "stopped", speed: 1, energy: 0 },
+//   },
+//   initial: "stopped",
+//   current: "stopped",
+//   attempts: [
+//     {
+//       name: "walk",
+//       success: false,
+//       failure: {
+//         type: "ConditionValue",
+//         undefined: false,
+//         trigger: "walk",
+//         method: "hasEnergy",
+//         context: { state: "stopped", speed: 1, energy: 0 },
+//       },
+//       conditions: [
+//         {
+//           name: "hasEnergy",
+//           success: false,
+//           context: { state: "stopped", speed: 1, energy: 0 },
+//         },
+//       ],
+//       effects: [],
+//       transition: {
+//         origins: ["stopped"],
+//         destination: "walking",
+//         effects: ["speedUp"],
+//         conditions: ["hasEnergy"],
+//       },
+//       context: { state: "stopped", speed: 1, energy: 0 },
+//     },
+//   ],
+//   precontext: { state: "stopped", speed: 1, energy: 0 },
+//   context: { state: "stopped", speed: 1, energy: 0 },
+// };
+```
+
+Destructured for simpler design:
+
+```ts
+const { success, failure } = objectMachine.trigger("walk");
+```

@@ -45,18 +45,31 @@ export type TransitionFailure<TriggerType extends string, T> = {
   undefined: boolean;
   trigger: TriggerType | null;
   method: Condition<T> | Effect<T> | null;
-  index: number | null;
+  context: T | null;
+};
+
+export type PendingTransitionResult<
+  StateType,
+  TriggerType extends string,
+  T
+> = {
+  success: boolean | null; // Whether the Transition was successful or not
+  failure: TransitionFailure<TriggerType, T> | null;
+  initial: StateType;
+  current: StateType | null;
+  attempts: TransitionAttempt<StateType, TriggerType, T>[] | null;
+  precontext: T;
   context: T | null;
 };
 
 export type TransitionResult<StateType, TriggerType extends string, T> = {
   success: boolean; // Whether the Transition was successful or not
   failure: TransitionFailure<TriggerType, T> | null;
-  previous: StateType;
+  initial: StateType;
   current: StateType;
-  transitions: TransitionAttempt<StateType, TriggerType, T>[];
-  precontext: T | null;
-  context: T | null;
+  attempts: TransitionAttempt<StateType, TriggerType, T>[];
+  precontext: T;
+  context: T;
 };
 
 export type TransitionDict<StateType, TriggerType extends string, T> = {
@@ -76,8 +89,8 @@ export type StateMachineOptions = {
   strictOrigins?: boolean;
 };
 
-export type TransitionOptions = {
-  onError?: () => void;
+export type TransitionOptions<T> = {
+  onError?: (context: T, precontext: T) => void;
   throwExceptions?: boolean;
 };
 
