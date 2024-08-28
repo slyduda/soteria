@@ -1,6 +1,6 @@
 {
   "name": "@olympos/soteria",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "private": false,
   "author": "Sly Duda <me@slyduda.com> (https://slyduda.com/)",
   "type": "module",
@@ -8,7 +8,7 @@
     "type": "git",
     "url": "git+https://github.com/slyduda/soteria.git"
   },
-  "description": "Finite State Machine mixins and helpers for programming state logic.",
+  "description": "Reactive Finite State Machine mixins and helpers for programming reactive state logic.",
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^22.4.0",
@@ -34,5 +34,10 @@
     "state",
     "state machine",
     "finite state machine"
-  ]
+  ],
+  "dependencies": {
+    "@olympos/soter": "0.0.9",
+    "@vue-reactivity/watch": "^0.2.0",
+    "@vue/reactivity": "^3.4.38"
+  }
 }
