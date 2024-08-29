@@ -1,39 +1,29 @@
 import { expect, test } from "vitest";
-import {
-  exampleMachineDict,
-  ExampleObject,
-  ExampleObjectState,
-} from "../examples";
-import { addStateMachine } from "../src";
+import { addReactiveStateMachine } from "../src";
+import { computed, ref } from "@vue/reactivity";
 
-// This test initializes the ExampleObject
-// We trigger the walk transition which by default transitions the object to walking state
-test("check to see if state machine can transition", () => {
-  const myObject = new ExampleObject();
-  const objectMachine = addStateMachine(myObject, exampleMachineDict);
-  expect(myObject.state).toBe<ExampleObjectState>("stopped");
-  objectMachine.trigger("walk");
-  expect(myObject.state).toBe<ExampleObjectState>("walking");
-});
+test("simple example", () => {
+  // Create a composable
+  const useMatter = (s: string) => {
+    const temperature = ref(0);
+    const state = s;
 
-// This test initializes the ExampleObject with energy of 0
-// We trigger the walk transition which checks to see if energy is > 0
-test("check to see if conditions work", () => {
-  const myObject = new ExampleObject(0);
-  const objectMachine = addStateMachine(myObject, exampleMachineDict, {
-    throwExceptions: false,
+    const canMelt = computed(() => {
+      return temperature.value > 40;
+    });
+
+    return {
+      state,
+      temperature,
+      canMelt,
+    };
+  };
+  // Merge composable instance with state machine
+  const matter = addReactiveStateMachine(useMatter("solid"), {
+    melt: { origins: "solid", destination: "liquid", conditions: "canMelt" },
   });
-  expect(myObject.state).toBe<ExampleObjectState>("stopped");
-  objectMachine.trigger("walk");
-  expect(myObject.state).toBe<ExampleObjectState>("stopped");
-});
 
-// This test initializes the ExampleObject with energy of 1
-// We trigger the walk transition which reduces energy by 1
-test("check to see if effects work", () => {
-  const myObject = new ExampleObject(1);
-  const objectMachine = addStateMachine(myObject, exampleMachineDict);
-  expect(myObject.state).toBe<ExampleObjectState>("stopped");
-  objectMachine.trigger("walk");
-  expect(myObject.energy).toBe(0);
+  const { temperature } = matter;
+  temperature.value = 50;
+  expect(matter.state).toBe("liquid");
 });

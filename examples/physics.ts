@@ -1,47 +1,37 @@
-import { TransitionDict } from "../src";
+import { TransitionInstructions } from "@olympos/soter";
+import { ref, computed, Ref, ComputedRef } from "@vue/reactivity";
 
 export type MatterState = "solid" | "liquid" | "gas" | "plasma";
-export type MatterTrigger =
-  | "melt"
-  | "evaporate"
-  | "sublimate"
-  | "ionize"
-  | "freeze"
-  | "depose"
-  | "condense"
-  | "recombine";
+export type MatterTrigger = "melt";
 
-export class Matter {
+type Matter = {
   state: MatterState;
-  temperature: number;
-  pressure: number;
+  temperature: Ref<number>;
+  effected: Ref<boolean>;
+  canMelt: ComputedRef<boolean>;
+};
 
-  constructor(state: MatterState, temperature?: number, pressure?: number) {
-    this.state = state;
-    this.temperature = temperature ?? 0;
-    this.pressure = pressure ?? 101.325;
-  }
+export const useMatter = (s: MatterState): Matter => {
+  const temperature = ref(0);
+  const effected = ref(false);
+  const state = s;
 
-  setEnvironment(props?: { temperature: number; pressure: number }) {
-    const { temperature = 0, pressure = 101.325 } = props ?? {};
-    this.temperature = temperature;
-    this.pressure = pressure;
-  }
-}
+  const canMelt = computed(() => {
+    return temperature.value > 40;
+  });
 
-export const matterMachineDict: TransitionDict<
+  return {
+    state,
+    effected,
+    temperature,
+    canMelt,
+  };
+};
+
+export const matterMachineDict: TransitionInstructions<
   MatterState,
   MatterTrigger,
   Matter
 > = {
-  melt: [
-    { origins: "solid", destination: "liquid", effects: "setEnvironment" },
-  ],
-  evaporate: [{ origins: "liquid", destination: "gas" }],
-  sublimate: [{ origins: "solid", destination: "gas" }],
-  ionize: [{ origins: "gas", destination: "plasma" }],
-  freeze: [{ origins: "liquid", destination: "solid" }],
-  depose: [{ origins: "gas", destination: "solid" }],
-  condense: [{ origins: "gas", destination: "liquid" }],
-  recombine: [{ origins: "plasma", destination: "gas" }],
+  melt: [{ origins: "solid", destination: "liquid", conditions: "canMelt" }],
 };
