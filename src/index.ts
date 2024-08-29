@@ -56,9 +56,9 @@ function addReactiveStateMachine<
     const transitions = normalizeArray(instructions[trigger]);
     for (const transition of transitions) {
       const conditions = normalizeArray(transition.conditions ?? []);
-      const conditionFunctions = conditions.map(
-        (condition) => proxy[condition]
-      );
+      const conditionFunctions = conditions
+        .map((condition) => proxy[condition as keyof T]) // TODO DANGEROUS MAYBE CAST AS UNDEFINED
+        .filter((condition) => condition !== undefined);
       watch([...conditionFunctions], () => {
         const conditionsMet = conditionFunctions.every((conditionFunction) =>
           isRef(conditionFunction)
@@ -72,7 +72,7 @@ function addReactiveStateMachine<
 
         for (const effect of normalizeArray(transition.effects ?? [])) {
           // Define Effect Function
-          const effectFunction = proxy[effect];
+          const effectFunction = proxy[effect as keyof T]; // TODO DANGEROUS MAYBE CAST AS UNDEFINED
 
           // Skip if it isnt a method
           if (typeof effectFunction !== "function") continue;
