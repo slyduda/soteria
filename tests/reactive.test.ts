@@ -13,7 +13,7 @@ test("check to see reactive state machine works", () => {
   );
   const { temperature } = matterReactiveMachine;
   temperature.value = 50;
-  expect(matterReactiveMachine.state).toBe("liquid");
+  expect(matterReactiveMachine.state.value).toBe("liquid");
 });
 
 test("check to see reactivity works", () => {

@@ -36,7 +36,6 @@
     "finite state machine"
   ],
   "dependencies": {
-    "@olympos/soter": "0.0.10",
     "@vue-reactivity/watch": "^0.2.0",
     "@vue/reactivity": "^3.4.38"
   }

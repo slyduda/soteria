@@ -1,17 +1,20 @@
 import { watch } from "@vue-reactivity/watch";
-import { isRef } from "@vue/reactivity";
+import { isRef, Ref } from "@vue/reactivity";
 
 import { normalizeArray } from "./utils";
 import {
-  Stateful,
   StateMachine,
   StateMachineOptions,
   TransitionInstructions,
 } from "@olympos/soter";
 
-function evaluateReactiveCondition<T>(
+type ReactiveStateful<StateType> = {
+  state: Ref<StateType>;
+};
+
+function evaluateReactiveCondition<Context>(
   conditionFunction: any,
-  context: T
+  context: Context
 ): boolean {
   if (typeof conditionFunction === "function") {
     return conditionFunction.call(context);
@@ -26,22 +29,64 @@ function evaluateReactiveCondition<T>(
   }
 }
 
+function getReactiveState<
+  Context extends ReactiveStateful<StateType>,
+  StateType
+>(context: Context, key: keyof ReactiveStateful<StateType>): StateType {
+  return context[key].value;
+}
+
+function setReactiveState<
+  Context extends ReactiveStateful<StateType>,
+  StateType
+>(context: Context, state: StateType, key: keyof ReactiveStateful<StateType>) {
+  context[key].value = state;
+}
+
 function addReactiveStateMachine<
   StateType,
   TriggerType extends string,
-  T extends Stateful<StateType>
+  Context extends ReactiveStateful<StateType>
 >(
-  context: T,
-  instructions: TransitionInstructions<StateType, TriggerType, T>,
-  options?: StateMachineOptions
-): T & StateMachine<StateType, TriggerType, T> {
-  const wrapper = new StateMachine(context, instructions, {
+  context: Context,
+  instructions: TransitionInstructions<StateType, TriggerType, Context>,
+  options?: StateMachineOptions<
+    StateType,
+    Context,
+    ReactiveStateful<StateType>,
+    "state"
+  >
+): Context &
+  StateMachine<
+    StateType,
+    TriggerType,
+    ReactiveStateful<StateType>,
+    "state",
+    Context
+  > {
+  const wrapper = new StateMachine<
+    StateType,
+    TriggerType,
+    ReactiveStateful<StateType>,
+    "state",
+    Context
+  >(context, instructions, {
+    key: "state",
     ...options,
     conditionEvaluator: evaluateReactiveCondition,
+    getState: getReactiveState,
+    setState: setReactiveState,
   }); // Set the condition evaluator to the reactive version
 
   const proxy = new Proxy(
-    context as T & StateMachine<StateType, TriggerType, T>,
+    context as Context &
+      StateMachine<
+        StateType,
+        TriggerType,
+        ReactiveStateful<StateType>,
+        "state",
+        Context
+      >,
     {
       get(target, prop, receiver) {
         if (prop in wrapper) {
@@ -57,7 +102,7 @@ function addReactiveStateMachine<
     for (const transition of transitions) {
       const conditions = normalizeArray(transition.conditions ?? []);
       const conditionFunctions = conditions
-        .map((condition) => proxy[condition as keyof T]) // TODO DANGEROUS MAYBE CAST AS UNDEFINED
+        .map((condition) => proxy[condition as keyof Context]) // TODO DANGEROUS MAYBE CAST AS UNDEFINED
         .filter((condition) => condition !== undefined);
       watch([...conditionFunctions], () => {
         const conditionsMet = conditionFunctions.every((conditionFunction) =>
@@ -72,7 +117,7 @@ function addReactiveStateMachine<
 
         for (const effect of normalizeArray(transition.effects ?? [])) {
           // Define Effect Function
-          const effectFunction = proxy[effect as keyof T]; // TODO DANGEROUS MAYBE CAST AS UNDEFINED
+          const effectFunction = proxy[effect as keyof Context]; // TODO DANGEROUS MAYBE CAST AS UNDEFINED
 
           // Skip if it isnt a method
           if (typeof effectFunction !== "function") continue;
@@ -81,7 +126,7 @@ function addReactiveStateMachine<
           effectFunction.call(proxy);
         }
 
-        proxy.state = transition.destination;
+        proxy.state.value = transition.destination;
       });
     }
   }

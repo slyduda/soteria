@@ -6,7 +6,7 @@ test("simple example", () => {
   // Create a composable
   const useMatter = (s: string) => {
     const temperature = ref(0);
-    const state = s;
+    const state = ref(s);
 
     const canMelt = computed(() => {
       return temperature.value > 40;
@@ -25,5 +25,5 @@ test("simple example", () => {
 
   const { temperature } = matter;
   temperature.value = 50;
-  expect(matter.state).toBe("liquid");
+  expect(matter.state.value).toBe("liquid");
 });
