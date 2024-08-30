@@ -351,6 +351,11 @@
   resolved "https://registry.yarnpkg.com/@microsoft/tsdoc/-/tsdoc-0.15.0.tgz#f29a55df17cb6e87cfbabce33ff6a14a9f85076d"
   integrity sha512-HZpPoABogPvjeJOdzCOSJsXeL/SMCBgBZMVC3X3d7YYp2gf31MfxhUoYUNwf1ERPJOnQc0wkFn9trqI6ZEdZuA==
 
+"@olympos/soter@0.0.12":
+  version "0.0.12"
+  resolved "https://registry.yarnpkg.com/@olympos/soter/-/soter-0.0.12.tgz#f61cc78174450dc3f0193bfc952dee60228f91b0"
+  integrity sha512-eja7TL68dltnMEIHJjNzzKzFkSY9ACjCXeQkYQzJksUYjKilsaiKkF4N8/y9JEUm8I0NJhrDjdEKv3jmyk+zzw==
+
 "@rollup/pluginutils@^5.1.0":
   version "5.1.0"
   resolved "https://registry.yarnpkg.com/@rollup/pluginutils/-/pluginutils-5.1.0.tgz#7e53eddc8c7f483a4ad0b94afb1f7f5fd3c771e0"
