@@ -132,16 +132,9 @@ function machine<
     state: State,
     oldState: State,
     context: Context,
-    machine: StateMachine<
-      Context,
-      State,
-      any,
-      ReactiveStateful<State>,
-      "state"
-    > // Too complicated to type
+    machine: StateMachine<Context, State, any, ReactiveStateful<State>, "state"> // Too complicated to type
   ) => {
     // Kill the watchers
-
     for (const disposable of disposables) {
       disposable.watcher();
     }
@@ -151,14 +144,13 @@ function machine<
     if (options?.onTransition)
       options?.onTransition(state, oldState, context, wrapper);
 
-    // Trigger cascading transitions.
-    // while (machine.validatedTransitions.length) {
-    //   machine.trigger(machine.validatedTransitions[0].trigger);
+    while (machine.validatedTransitions.length) {
+      machine.trigger(machine.validatedTransitions[0].trigger);
 
-    //   // Call the default onTransition
-    //   if (options?.onTransition)
-    //     options?.onTransition(state, oldState, context, wrapper);
-    // }
+      // Call the default onTransition
+      if (options?.onTransition)
+        options?.onTransition(state, oldState, context, wrapper);
+    }
 
     // Make more watchers
     generateWatchers(context, machine, disposables);
