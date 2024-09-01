@@ -1,6 +1,6 @@
 {
   "name": "@olympos/soteria",
-  "version": "0.0.11",
+  "version": "0.0.12",
   "private": false,
   "author": "Sly Duda <me@slyduda.com> (https://slyduda.com/)",
   "type": "module",
@@ -37,7 +37,7 @@
     "finite state machine"
   ],
   "dependencies": {
-    "@olympos/soter": "^0.0.13",
+    "@olympos/soter": "0.0.14",
     "@vue-reactivity/watch": "^0.2.0",
     "@vue/reactivity": "^3.4.38"
   }
