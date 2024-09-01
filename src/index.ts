@@ -1,18 +1,30 @@
-import { watch } from "@vue-reactivity/watch";
-import { isRef, Ref } from "@vue/reactivity";
+import { watch, WatchStopHandle } from "@vue-reactivity/watch";
+import { Ref } from "@vue/reactivity";
 
 import { normalizeArray } from "./utils";
-import {
-  StateMachine,
-  StateMachineOptions,
+import { StateMachine } from "@olympos/soter";
+import type {
+  Transition,
   TransitionInstructions,
+  TransitionOptions,
+  TransitionResult,
+  StateMachineOptions,
 } from "@olympos/soter";
 
-type ReactiveStateful<StateType> = {
-  state: Ref<StateType>;
+type ReactiveStateful<State> = {
+  state: Ref<State>;
 };
 
-function evaluateReactiveCondition<Context>(
+type DisposableWatcher = {
+  transition: Transition<any, any, any>;
+  watcher: WatchStopHandle;
+};
+
+function reactiveContextCopier<Context>(context: Context): Context {
+  return Object.assign({}, context);
+}
+
+function reactiveConditionEvaluator<Context>(
   conditionFunction: any,
   context: Context
 ): boolean {
@@ -29,64 +41,148 @@ function evaluateReactiveCondition<Context>(
   }
 }
 
-function getReactiveState<
-  Context extends ReactiveStateful<StateType>,
-  StateType
->(context: Context, key: keyof ReactiveStateful<StateType>): StateType {
+function getReactiveState<Context extends ReactiveStateful<State>, State>(
+  context: Context,
+  key: keyof ReactiveStateful<State>
+): State {
   return context[key].value;
 }
 
-function setReactiveState<
-  Context extends ReactiveStateful<StateType>,
-  StateType
->(context: Context, state: StateType, key: keyof ReactiveStateful<StateType>) {
+function setReactiveState<Context extends ReactiveStateful<State>, State>(
+  context: Context,
+  state: State,
+  key: keyof ReactiveStateful<State>
+) {
   context[key].value = state;
 }
 
-function addReactiveStateMachine<
-  StateType,
-  TriggerType extends string,
-  Context extends ReactiveStateful<StateType>
+function machine<
+  Context extends ReactiveStateful<State>,
+  State,
+  Trigger extends string
 >(
   context: Context,
-  instructions: TransitionInstructions<StateType, TriggerType, Context>,
+  instructions: TransitionInstructions<Context, State, Trigger>,
   options?: StateMachineOptions<
-    StateType,
     Context,
-    ReactiveStateful<StateType>,
+    State,
+    Trigger,
+    ReactiveStateful<State>,
     "state"
-  >
+  >,
+  watchFn?: any
 ): Context &
-  StateMachine<
-    StateType,
-    TriggerType,
-    ReactiveStateful<StateType>,
-    "state",
-    Context
-  > {
+  StateMachine<Context, State, Trigger, ReactiveStateful<State>, "state"> {
+  const watchFunction = watchFn ?? watch;
+
+  const generateWatchers = (
+    context: Context,
+    machine: StateMachine<
+      Context,
+      State,
+      Trigger,
+      ReactiveStateful<State>,
+      "state"
+    >,
+    disposables: DisposableWatcher[]
+  ) => {
+    for (const trigger in instructions) {
+      const transitions = normalizeArray(instructions[trigger]);
+
+      for (const transition of transitions) {
+        const origins = normalizeArray(transition.origins ?? []);
+        if (!origins.includes(context["state"].value)) continue;
+
+        const conditions = normalizeArray(transition.conditions ?? []);
+        const conditionFunctions = conditions
+          .map((condition) => context[condition as keyof Context]) // TODO DANGEROUS MAYBE CAST AS UNDEFINED
+          .filter((condition) => condition !== undefined);
+
+        disposables.push({
+          transition: transition,
+          watcher: watchFunction([...conditionFunctions], () => {
+            const conditionsMet = conditionFunctions.every(
+              (conditionFunction) =>
+                reactiveConditionEvaluator(conditionFunction, context)
+            );
+
+            if (!conditionsMet) return;
+
+            for (const effect of normalizeArray(transition.effects ?? [])) {
+              // Define Effect Function
+              const effectFunction = context[effect as keyof Context]; // TODO DANGEROUS MAYBE CAST AS UNDEFINED
+
+              // Skip if it isnt a method // TODO: Figure out if this should error
+              if (typeof effectFunction !== "function") continue;
+
+              // Call function
+              effectFunction.call(context);
+            }
+
+            machine.to(transition.destination);
+          }),
+        });
+      }
+    }
+  };
+
+  const disposables: DisposableWatcher[] = [];
+
+  const onReactiveTransition = (
+    state: State,
+    oldState: State,
+    context: Context,
+    machine: StateMachine<
+      Context,
+      State,
+      any,
+      ReactiveStateful<State>,
+      "state"
+    > // Too complicated to type
+  ) => {
+    // Kill the watchers
+
+    for (const disposable of disposables) {
+      disposable.watcher();
+    }
+    disposables.length = 0;
+
+    // Call the default onTransition
+    if (options?.onTransition)
+      options?.onTransition(state, oldState, context, wrapper);
+
+    // Trigger cascading transitions.
+    // while (machine.validatedTransitions.length) {
+    //   machine.trigger(machine.validatedTransitions[0].trigger);
+
+    //   // Call the default onTransition
+    //   if (options?.onTransition)
+    //     options?.onTransition(state, oldState, context, wrapper);
+    // }
+
+    // Make more watchers
+    generateWatchers(context, machine, disposables);
+  };
+
   const wrapper = new StateMachine<
-    StateType,
-    TriggerType,
-    ReactiveStateful<StateType>,
-    "state",
-    Context
+    Context,
+    State,
+    Trigger,
+    ReactiveStateful<State>,
+    "state"
   >(context, instructions, {
     key: "state",
     ...options,
-    conditionEvaluator: evaluateReactiveCondition,
+    conditionEvaluator: reactiveConditionEvaluator,
+    contextCopier: reactiveContextCopier,
     getState: getReactiveState,
     setState: setReactiveState,
+    onTransition: onReactiveTransition,
   }); // Set the condition evaluator to the reactive version
 
   const proxy = new Proxy(
     context as Context &
-      StateMachine<
-        StateType,
-        TriggerType,
-        ReactiveStateful<StateType>,
-        "state",
-        Context
-      >,
+      StateMachine<Context, State, Trigger, ReactiveStateful<State>, "state">,
     {
       get(target, prop, receiver) {
         if (prop in wrapper) {
@@ -97,41 +193,17 @@ function addReactiveStateMachine<
     }
   );
 
-  for (const trigger in instructions) {
-    const transitions = normalizeArray(instructions[trigger]);
-    for (const transition of transitions) {
-      const conditions = normalizeArray(transition.conditions ?? []);
-      const conditionFunctions = conditions
-        .map((condition) => proxy[condition as keyof Context]) // TODO DANGEROUS MAYBE CAST AS UNDEFINED
-        .filter((condition) => condition !== undefined);
-      watch([...conditionFunctions], () => {
-        const conditionsMet = conditionFunctions.every((conditionFunction) =>
-          isRef(conditionFunction)
-            ? conditionFunction.value === true
-            : typeof conditionFunction === "function"
-            ? conditionFunction.call(proxy) === true
-            : conditionFunction
-        );
-
-        if (!conditionsMet) return;
-
-        for (const effect of normalizeArray(transition.effects ?? [])) {
-          // Define Effect Function
-          const effectFunction = proxy[effect as keyof Context]; // TODO DANGEROUS MAYBE CAST AS UNDEFINED
-
-          // Skip if it isnt a method
-          if (typeof effectFunction !== "function") continue;
-
-          // Call function
-          effectFunction.call(proxy);
-        }
-
-        proxy.state.value = transition.destination;
-      });
-    }
-  }
+  generateWatchers(context, wrapper, disposables);
 
   return proxy;
 }
 
-export { addReactiveStateMachine };
+export {
+  machine,
+  StateMachine,
+  Transition,
+  TransitionInstructions,
+  TransitionOptions,
+  TransitionResult,
+  StateMachineOptions,
+};

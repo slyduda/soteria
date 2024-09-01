@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { addReactiveStateMachine } from "../src";
+import { machine } from "../src";
 import { computed, ref } from "@vue/reactivity";
 
 test("simple example", () => {
@@ -12,18 +12,42 @@ test("simple example", () => {
       return temperature.value > 40;
     });
 
+    const canEvaporate = computed(() => {
+      return temperature.value > 100;
+    });
+
+    const canSublimate = computed(() => {
+      return temperature.value > 100;
+    });
+
+    const canIonize = computed(() => {
+      return temperature.value > 1000;
+    });
+
     return {
       state,
       temperature,
       canMelt,
+      canEvaporate,
+      canSublimate,
+      canIonize,
     };
   };
   // Merge composable instance with state machine
-  const matter = addReactiveStateMachine(useMatter("solid"), {
-    melt: { origins: "solid", destination: "liquid", conditions: "canMelt" },
+  const matter = machine(useMatter("solid"), {
+    fromSolid: [
+      { origins: "solid", destination: "gas", conditions: "canSublimate" },
+      { origins: "solid", destination: "liquid", conditions: "canMelt" },
+    ],
+    fromLiquid: [
+      { origins: "liquid", destination: "gas", conditions: "canEvaporate" },
+    ],
+    fromGas: [
+      { origins: "gas", destination: "plasma", conditions: "canIonize" },
+    ],
   });
 
   const { temperature } = matter;
-  temperature.value = 50;
-  expect(matter.state.value).toBe("liquid");
+  temperature.value = 101;
+  expect(matter.state.value).toBe("gas");
 });

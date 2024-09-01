@@ -29,9 +29,9 @@ export const useMatter = (s: MatterState): Matter => {
 };
 
 export const matterMachineDict: TransitionInstructions<
+  Matter,
   MatterState,
-  MatterTrigger,
-  Matter
+  MatterTrigger
 > = {
   melt: [{ origins: "solid", destination: "liquid", conditions: "canMelt" }],
 };

@@ -1,16 +1,13 @@
 import { expect, test } from "vitest";
 import { matterMachineDict, useMatter } from "../examples/physics";
-import { addReactiveStateMachine } from "../src";
+import { machine } from "../src";
 
 import { ref } from "@vue/reactivity";
 import { watch } from "@vue-reactivity/watch";
 
 test("check to see reactive state machine works", () => {
   const matter = useMatter("solid");
-  const matterReactiveMachine = addReactiveStateMachine(
-    matter,
-    matterMachineDict
-  );
+  const matterReactiveMachine = machine(matter, matterMachineDict);
   const { temperature } = matterReactiveMachine;
   temperature.value = 50;
   expect(matterReactiveMachine.state.value).toBe("liquid");
